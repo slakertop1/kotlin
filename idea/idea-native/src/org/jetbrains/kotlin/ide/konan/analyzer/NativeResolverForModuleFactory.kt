@@ -46,7 +46,7 @@ class NativeResolverForModuleFactory(
             moduleContext,
             declarationProviderFactory,
             CodeAnalyzerInitializer.getInstance(moduleContext.project).createTrace(),
-            NativePlatforms.defaultNativePlatform,
+            moduleDescriptor.platform!!,
             NativePlatformAnalyzerServices,
             targetEnvironment,
             languageVersionSettings

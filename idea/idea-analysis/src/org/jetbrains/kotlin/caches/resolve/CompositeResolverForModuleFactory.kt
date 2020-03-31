@@ -137,7 +137,8 @@ class CompositeResolverForModuleFactory(
 
     private fun getKonanProvidersIfAny(moduleInfo: ModuleInfo, container: StorageComponentContainer): List<PackageFragmentProvider> {
         if (!targetPlatform.has<NativePlatform>()) return emptyList()
-        val resolution = NativePlatforms.defaultNativePlatform.idePlatformKind.resolution
+        // TODO: detect native platform by moduleInfo
+        val resolution = NativePlatforms.unspecifiedNativePlatform.idePlatformKind.resolution
 
         val konanProvider = resolution.createPlatformSpecificPackageFragmentProvider(
             moduleInfo,
