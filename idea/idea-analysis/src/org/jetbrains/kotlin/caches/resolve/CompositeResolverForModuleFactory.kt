@@ -11,7 +11,6 @@ import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.analyzer.*
 import org.jetbrains.kotlin.analyzer.common.CommonAnalysisParameters
 import org.jetbrains.kotlin.analyzer.common.configureCommonSpecificComponents
-import org.jetbrains.kotlin.caches.resolve.CommonPlatformKindResolution.Companion.createCommonKlibPackageFragmentProvider
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.container.*
 import org.jetbrains.kotlin.context.ModuleContext
@@ -29,10 +28,8 @@ import org.jetbrains.kotlin.load.java.lazy.ModuleClassResolverImpl
 import org.jetbrains.kotlin.load.kotlin.PackagePartProvider
 import org.jetbrains.kotlin.load.kotlin.VirtualFileFinderFactory
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.platform.*
 import org.jetbrains.kotlin.platform.TargetPlatform
-import org.jetbrains.kotlin.platform.has
-import org.jetbrains.kotlin.platform.idePlatformKind
-import org.jetbrains.kotlin.platform.isCommon
 import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.JvmPlatform
 import org.jetbrains.kotlin.platform.konan.NativePlatform
@@ -106,7 +103,7 @@ class CompositeResolverForModuleFactory(
             yieldAll(getCommonProvidersIfAny(moduleInfo, moduleContext, moduleDescriptor, container)) // todo: module context
             yieldAll(getJsProvidersIfAny(moduleInfo, moduleContext, moduleDescriptor, container))
             yieldAll(getJvmProvidersIfAny(container))
-            yieldAll(getKonanProvidersIfAny(moduleInfo, container))
+            yieldAll(getNativeProvidersIfAny(moduleInfo, container))
         }.toList()
 
         return ResolverForModule(CompositePackageFragmentProvider(packageFragmentProviders), container)
@@ -122,7 +119,7 @@ class CompositeResolverForModuleFactory(
 
         val metadataProvider = container.get<MetadataPackageFragmentProvider>()
 
-        val klibMetadataProvider = createCommonKlibPackageFragmentProvider(
+        val klibMetadataProvider = CommonPlatforms.defaultCommonPlatform.idePlatformKind.resolution.createKlibPackageFragmentProvider(
             moduleInfo,
             moduleContext.storageManager,
             container.get<LanguageVersionSettings>(),
@@ -135,19 +132,17 @@ class CompositeResolverForModuleFactory(
     private fun getJvmProvidersIfAny(container: StorageComponentContainer): List<PackageFragmentProvider> =
         if (targetPlatform.has<JvmPlatform>()) listOf(container.get<JavaDescriptorResolver>().packageFragmentProvider) else emptyList()
 
-    private fun getKonanProvidersIfAny(moduleInfo: ModuleInfo, container: StorageComponentContainer): List<PackageFragmentProvider> {
+    private fun getNativeProvidersIfAny(moduleInfo: ModuleInfo, container: StorageComponentContainer): List<PackageFragmentProvider> {
         if (!targetPlatform.has<NativePlatform>()) return emptyList()
-        // TODO: detect native platform by moduleInfo
-        val resolution = NativePlatforms.unspecifiedNativePlatform.idePlatformKind.resolution
 
-        val konanProvider = resolution.createPlatformSpecificPackageFragmentProvider(
-            moduleInfo,
-            container.get<StorageManager>(),
-            container.get<LanguageVersionSettings>(),
-            container.get<ModuleDescriptor>()
-        ) ?: return emptyList()
-
-        return listOf(konanProvider)
+        return listOfNotNull(
+            NativePlatforms.unspecifiedNativePlatform.idePlatformKind.resolution.createKlibPackageFragmentProvider(
+                moduleInfo,
+                container.get<StorageManager>(),
+                container.get<LanguageVersionSettings>(),
+                container.get<ModuleDescriptor>()
+            )
+        )
     }
 
     private fun getJsProvidersIfAny(
