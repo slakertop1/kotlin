@@ -21,7 +21,7 @@ class MavenImportListener(val project: Project) : MavenProjectsManager.Listener 
             MavenImportListener { _: Collection<MavenProject>, _: List<Module> ->
                 runUnderDisposeAwareIndicator(project) {
                     notifyOutdatedBundledCompilerIfNecessary(project)
-                    KotlinMigrationProjectService.getInstance(project)?.onImportFinished()
+                    KotlinMigrationProjectService.getInstance(project).onImportFinished()
                 }
             }
         )
@@ -31,7 +31,7 @@ class MavenImportListener(val project: Project) : MavenProjectsManager.Listener 
 
     override fun projectsScheduled() {
         runUnderDisposeAwareIndicator(project) {
-            KotlinMigrationProjectService.getInstance(project)?.onImportAboutToStart()
+            KotlinMigrationProjectService.getInstance(project).onImportAboutToStart()
         }
     }
 }
