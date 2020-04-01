@@ -8,6 +8,7 @@
 package org.jetbrains.kotlin.platform
 
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.containers.ContainerUtil
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.isJps
 import org.jetbrains.kotlin.extensions.ApplicationExtensionDescriptor
@@ -64,20 +65,27 @@ abstract class IdePlatformKind<Kind : IdePlatformKind<Kind>> {
             kinds
         }
 
-
         fun <Args : CommonCompilerArguments> platformByCompilerArguments(arguments: Args): TargetPlatform? =
             ALL_KINDS.firstNotNullResult { it.platformByCompilerArguments(arguments) }
 
+        private val KINDS_BY_TARGET_PLATFORM_CACHE = ContainerUtil.newConcurrentMap<TargetPlatform, IdePlatformKind<*>>()
+
+        internal fun getIdePlatformKind(targetPlatform: TargetPlatform): IdePlatformKind<*> {
+            return KINDS_BY_TARGET_PLATFORM_CACHE.getOrPut(targetPlatform) {
+                ALL_KINDS.filter { it.supportsTargetPlatform(targetPlatform) }.let { list ->
+                    when {
+                        list.size == 1 -> list[0]
+                        list.size > 1 -> list[0].also {
+                            Logger.getInstance(IdePlatformKind::class.java)
+                                .warn("Found more than one IdePlatformKind [$list] for platform [$targetPlatform].")
+                        }
+                        else -> error("Unknown platform $targetPlatform")
+                    }
+                }
+            }
+        }
     }
 }
 
 val TargetPlatform.idePlatformKind: IdePlatformKind<*>
-    get() = IdePlatformKind.ALL_KINDS.filter { it.supportsTargetPlatform(this) }.let { list ->
-        when {
-            list.size == 1 -> list.first()
-            list.size > 1 -> list.first().also {
-                Logger.getInstance(IdePlatformKind.javaClass).warn("Found more than one IdePlatformKind [$list] for target [$this].")
-            }
-            else -> error("Unknown platform $this")
-        }
-    }
+    get() = IdePlatformKind.getIdePlatformKind(this)
