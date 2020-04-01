@@ -34,4 +34,4 @@ object JsPlatforms {
     val allJsPlatforms: List<TargetPlatform> = listOf(defaultJsPlatform)
 }
 
-fun TargetPlatform?.isJs(): Boolean = this?.singleOrNull() is JsPlatform
+fun TargetPlatform?.isJs(): Boolean = if (this == null || isEmpty()) false else all { it is JsPlatform }

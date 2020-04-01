@@ -71,4 +71,4 @@ class JdkPlatform(val targetVersion: JvmTarget) : JvmPlatform() {
     override fun hashCode(): Int = JdkPlatform::class.hashCode()
 }
 
-fun TargetPlatform?.isJvm(): Boolean = this?.singleOrNull() is JvmPlatform
+ fun TargetPlatform?.isJvm(): Boolean = if (this == null || isEmpty()) false else all { it is JvmPlatform }
